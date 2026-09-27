@@ -8,14 +8,221 @@
 </style></head>
 <body><main class="shell">
 <header class="topbar"><div class="brand"><div class="mobile-logo"><span class="mobile-word">MOBILE</span><span class="mobile-number">2000</span></div><div class="brand-copy"><h1>Spin & Win</h1><p>Powered by Mobile2000</p></div></div><div class="toolbar"><span class="pill"><span class="dot"></span>Ready</span><button id="present" type="button">Presentation Mode</button><button id="fullscreen" type="button">Full Screen</button></div></header>
-<div class="layout"><aside class="panel glass"><p class="eyebrow">Draw setup</p><h2>Customer entries</h2><p class="helper">Enter one customer comment per line. Long comments stay on one horizontal line and can be scrolled left/right.</p><label class="eyebrow" for="headline">Custom headline</label><input id="headline" type="text" maxlength="80" value="Spin. Win. Celebrate!"><button id="hideDetails" class="details-toggle" type="button">Hide Customer Details</button><div id="customerDetails"><div class="upload-wrap"><label class="upload-label" for="excelUpload">Upload Excel / CSV</label><input id="excelUpload" type="file" accept=".xlsx,.xls,.csv" hidden><span class="upload-note">First worksheet only. One Excel row = one participant. Multiple columns are combined with |.</span></div><textarea id="names" wrap="off" spellcheck="false">55123456
-66778899
-90909090
-99112233
-50001122
-60003344</textarea><div class="buttons"><button id="update" class="primary">Update Wheel</button><button id="shuffle" class="secondary">Shuffle</button></div><div id="adminWinner" class="admin-winner"><strong id="adminWinnerName">No winner yet</strong><span id="adminWinnerPhone">Full number hidden</span><button id="revealPhone" class="secondary" type="button">Show Full Winner Number</button></div></div><div class="settings"><label class="setting"><span>Spin sound</span><input id="sound" class="toggle" type="checkbox" checked></label><label class="setting"><span>Remove winner after draw</span><input id="remove" class="toggle" type="checkbox"></label></div><div class="stats"><div class="stat"><span>Participants</span><strong id="count">0</strong></div><div class="stat"><span>Draws</span><strong id="draws">0</strong></div></div></aside>
-<section class="stage glass"><div id="confetti" class="confetti"></div><div class="stage-head"><p class="eyebrow">Mobile2000 lucky draw</p><h2 id="mainHeadline">Spin. Win. Celebrate!</h2><p class="helper">Press the centre button to begin.</p></div><div class="wheel-wrap"><div class="pointer"></div><canvas id="wheel" width="900" height="900"></canvas><button id="spin" class="spin">SPIN</button></div><div id="winner" class="winner"><span>Congratulations!</span><strong id="winnerName"></strong><p id="congrats"></p></div><div id="status" class="status">Wheel ready.</div></section></div></main>
+<div class="layout"><aside class="panel glass"><p class="eyebrow">Draw setup</p><h2>Customer entries</h2><p class="helper">Upload your Instagram comments Excel, or enter one entry per line as Username | Comment. Long comments stay as one participant.</p><label class="eyebrow" for="headline">Custom headline</label><input id="headline" type="text" maxlength="80" value="Spin. Win. Celebrate!"><button id="hideDetails" class="details-toggle" type="button">Hide Customer Details</button><div id="customerDetails"><div class="upload-wrap"><label class="upload-label" for="excelUpload">Upload Excel / CSV</label><input id="excelUpload" type="file" accept=".xlsx,.xls,.csv" hidden><span class="upload-note">Instagram export supported: the app automatically finds the Username and Comment columns. One comment row = one participant.</span></div><textarea id="names" wrap="off" spellcheck="false">vivinmathew | @flashh_22\nrana_12345_ | اخي الله يرزقها بالايفون\nal7moosa | @ali7moosa</textarea><div class="buttons"><button id="update" class="primary">Update Wheel</button><button id="shuffle" class="secondary">Shuffle</button></div><div id="adminWinner" class="admin-winner"><strong id="adminWinnerName">No winner yet</strong><span id="adminWinnerPhone">Winner comment will appear here</span></div></div><div class="settings"><label class="setting"><span>Spin sound</span><input id="sound" class="toggle" type="checkbox" checked></label><label class="setting"><span>Remove winner after draw</span><input id="remove" class="toggle" type="checkbox"></label></div><div class="stats"><div class="stat"><span>Participants</span><strong id="count">0</strong></div><div class="stat"><span>Draws</span><strong id="draws">0</strong></div></div></aside>
+<section class="stage glass"><div id="confetti" class="confetti"></div><div class="stage-head"><p class="eyebrow">Mobile2000 lucky draw</p><h2 id="mainHeadline">Spin. Win. Celebrate!</h2><p class="helper">Press the centre button to begin.</p></div><div class="wheel-wrap"><div class="pointer"></div><canvas id="wheel" width="900" height="900"></canvas><button id="spin" class="spin">SPIN</button></div><div id="winner" class="winner"><span>Congratulations!</span><strong id="winnerName"></strong><p id="winnerComment"></p><p id="congrats"></p></div><div id="status" class="status">Wheel ready.</div></section></div></main>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script>
-const $=id=>document.getElementById(id),headline=$('headline'),mainHeadline=$('mainHeadline'),c=$('wheel'),x=c.getContext('2d'),input=$('names'),update=$('update'),shuffle=$('shuffle'),spinBtn=$('spin'),count=$('count'),draws=$('draws'),winner=$('winner'),winnerName=$('winnerName'),congrats=$('congrats'),status=$('status'),sound=$('sound'),remove=$('remove'),confetti=$('confetti'),present=$('present'),fullscreen=$('fullscreen'),hideDetails=$('hideDetails'),customerDetails=$('customerDetails'),adminWinner=$('adminWinner'),adminWinnerName=$('adminWinnerName'),adminWinnerPhone=$('adminWinnerPhone'),revealPhone=$('revealPhone'),excelUpload=$('excelUpload');const colors=['#1677ff','#ef476f','#06d6a0','#ffb703','#8b5cf6','#ff7a00','#00b4d8','#f72585','#43aa8b','#4361ee'];let entries=[],rotation=0,spinning=false,lastTick=-1,audio=null,drawCount=0,lastWinner=null,phoneRevealed=false;function cleanPhone(v){return String(v||'').replace(/[^0-9+]/g,'')}function parse(){return input.value.split(/\n/).map(v=>v.trim()).filter(Boolean).map((row,i)=>{const parts=row.split('|');if(parts.length===1){const value=parts[0].trim();const phoneLike=/^\+?[0-9][0-9\s()-]{5,}$/.test(value);const phone=phoneLike?cleanPhone(value):'';return{name:'',phone,display:value,raw:row}}const name=(parts[0]||'').trim();const phone=cleanPhone(parts.slice(1).join('|'));return{name,phone,display:name||phone||('Customer '+(i+1)),raw:row}})}function maskPhone(phone){const p=String(phone||'');if(!p)return 'Winner';if(p.length>10)return p.slice(0,7)+'***'+p.slice(-3);if(p.length>=7)return p.slice(0,3)+'***'+p.slice(-3);if(p.length>4)return p.slice(0,2)+'***'+p.slice(-2);return '*'.repeat(p.length)}function publicWinner(e){return e.phone?maskPhone(e.phone):(e.name||e.display)}function wheelLabel(e){return e.display||e.name||e.phone}function draw(){const s=c.width,m=s/2,r=m-30;x.clearRect(0,0,s,s);if(!entries.length)return;const a=Math.PI*2/entries.length;entries.forEach((e,i)=>{const st=rotation+i*a-Math.PI/2,en=st+a;x.beginPath();x.moveTo(m,m);x.arc(m,m,r,st,en);x.closePath();x.fillStyle=colors[i%colors.length];x.fill();x.lineWidth=5;x.strokeStyle='rgba(255,255,255,.9)';x.stroke();x.save();x.translate(m,m);x.rotate(st+a/2);x.textAlign='right';x.textBaseline='middle';x.fillStyle='#fff';x.font=`800 ${Math.max(18,Math.min(34,410/Math.max(entries.length,8)))}px system-ui`;let t=wheelLabel(e);if(t.length>18)t=t.slice(0,17)+'…';x.fillText(t,r-42,0);x.restore()});x.beginPath();x.arc(m,m,r,0,Math.PI*2);x.lineWidth=15;x.strokeStyle='#fff';x.stroke()}function refresh(){if(spinning)return;entries=parse();count.textContent=entries.length;winner.style.display='none';status.textContent=entries.length>=2?'Wheel ready.':'Add at least two customers.';draw()}function ac(){if(!audio)audio=new(window.AudioContext||window.webkitAudioContext)();return audio}function tone(f,d,v=.055,t='square'){if(!sound.checked)return;const a=ac(),o=a.createOscillator(),g=a.createGain();o.type=t;o.frequency.value=f;g.gain.setValueAtTime(v,a.currentTime);g.gain.exponentialRampToValueAtTime(.001,a.currentTime+d);o.connect(g);g.connect(a.destination);o.start();o.stop(a.currentTime+d)}const norm=a=>((a%(Math.PI*2))+Math.PI*2)%(Math.PI*2);function winIndex(){const a=Math.PI*2/entries.length;return Math.floor((norm(-rotation)+a/2)/a)%entries.length}function celebrate(){confetti.innerHTML='';for(let i=0;i<80;i++){const p=document.createElement('i');p.style.left=Math.random()*100+'%';p.style.background=colors[i%colors.length];p.style.setProperty('--x',Math.random()*260-130+'px');p.style.animationDelay=Math.random()*.45+'s';confetti.appendChild(p)}setTimeout(()=>confetti.innerHTML='',3500)}function updateAdminWinner(){if(!lastWinner)return;adminWinner.classList.add('show');adminWinnerName.textContent='Winner: '+(lastWinner.name||maskPhone(lastWinner.phone));adminWinnerPhone.textContent=phoneRevealed?'Full number: '+(lastWinner.phone||'Not provided'):'Full number hidden';revealPhone.textContent=phoneRevealed?'Hide Full Winner Number':'Show Full Winner Number'}function finish(){const i=winIndex(),e=entries[i],publicValue=publicWinner(e);lastWinner=e;phoneRevealed=false;drawCount++;draws.textContent=drawCount;winnerName.textContent=publicValue;congrats.textContent='Congratulations, '+publicValue+'! You are the lucky winner. Mobile2000 wishes you an amazing day!';winner.style.display='block';updateAdminWinner();status.textContent='Winner selected successfully.';[523,659,784,1047].forEach((f,j)=>setTimeout(()=>tone(f,.34,.12,'sine'),j*140));celebrate();spinning=false;spinBtn.disabled=false;if(remove.checked&&entries.length>2){entries.splice(i,1);input.value=entries.map(v=>v.raw).join('\n');count.textContent=entries.length;setTimeout(draw,950)}}function spin(){if(spinning||entries.length<2){status.textContent='Add at least two customers before spinning.';return}spinning=true;spinBtn.disabled=true;winner.style.display='none';status.textContent='Spinning…';lastTick=-1;const start=rotation,target=start+(8+Math.random()*5)*Math.PI*2+Math.random()*Math.PI*2,duration=5600,t0=performance.now();function animate(now){const p=Math.min((now-t0)/duration,1),e=1-Math.pow(1-p,4);rotation=start+(target-start)*e;draw();const a=Math.PI*2/entries.length,t=Math.floor(norm(rotation)/a);if(t!==lastTick){tone(480+(1-p)*320,.04);lastTick=t}if(p<1)requestAnimationFrame(animate);else{rotation=norm(rotation);draw();finish()}}requestAnimationFrame(animate)}headline.addEventListener('input',()=>mainHeadline.textContent=headline.value.trim()||'Spin & Win');hideDetails.addEventListener('click',()=>{customerDetails.classList.toggle('hidden');const hidden=customerDetails.classList.contains('hidden');hideDetails.textContent=hidden?'Show Customer Details':'Hide Customer Details'});revealPhone.addEventListener('click',()=>{if(!lastWinner)return;phoneRevealed=!phoneRevealed;updateAdminWinner()});excelUpload.addEventListener('change',async(e)=>{const file=e.target.files&&e.target.files[0];if(!file)return;try{const data=await file.arrayBuffer();const wb=XLSX.read(data,{type:'array'});const ws=wb.Sheets[wb.SheetNames[0]];const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:'',raw:false});let lines=rows.map(row=>row.map(v=>String(v).trim().replace(/\r?\n/g,' ')).filter(Boolean).join(' | ')).filter(Boolean);if(lines.length&&/^(comment|comments|user\s*id|userid|customer|name|phone|mobile)$/i.test(lines[0].trim()))lines=lines.slice(1);if(!lines.length){status.textContent='No participant rows found in the uploaded file.';return}input.value=lines.join('\n');refresh();status.textContent=lines.length+' participants imported from '+file.name+'.';e.target.value=''}catch(err){status.textContent='Could not read this Excel file. Please use .xlsx, .xls, or .csv.';console.error(err)}});update.addEventListener('click',refresh);shuffle.addEventListener('click',()=>{if(spinning)return;const a=parse();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}input.value=a.map(v=>v.raw).join('\n');refresh()});spinBtn.addEventListener('click',spin);present.addEventListener('click',()=>{document.body.classList.toggle('presentation');present.textContent=document.body.classList.contains('presentation')?'Show Admin':'Presentation Mode'});fullscreen.addEventListener('click',async()=>{try{if(!document.fullscreenElement){await document.documentElement.requestFullscreen();fullscreen.textContent='Exit Full Screen'}else{await document.exitFullscreen();fullscreen.textContent='Full Screen'}}catch(e){status.textContent='Press F11 to enter browser full screen.'}});document.addEventListener('fullscreenchange',()=>{fullscreen.textContent=document.fullscreenElement?'Exit Full Screen':'Full Screen'});refresh();
+
+const $=id=>document.getElementById(id),
+headline=$('headline'),mainHeadline=$('mainHeadline'),c=$('wheel'),x=c.getContext('2d'),
+input=$('names'),update=$('update'),shuffle=$('shuffle'),spinBtn=$('spin'),
+count=$('count'),draws=$('draws'),winner=$('winner'),winnerName=$('winnerName'),
+winnerComment=$('winnerComment'),congrats=$('congrats'),status=$('status'),
+sound=$('sound'),remove=$('remove'),confetti=$('confetti'),present=$('present'),
+fullscreen=$('fullscreen'),hideDetails=$('hideDetails'),customerDetails=$('customerDetails'),
+adminWinner=$('adminWinner'),adminWinnerName=$('adminWinnerName'),
+adminWinnerPhone=$('adminWinnerPhone'),excelUpload=$('excelUpload');
+
+const colors=['#1677ff','#ef476f','#06d6a0','#ffb703','#8b5cf6','#ff7a00','#00b4d8','#f72585','#43aa8b','#4361ee'];
+let entries=[],rotation=0,spinning=false,lastTick=-1,audio=null,drawCount=0,lastWinner=null;
+
+function cleanText(v){
+  return String(v??'').replace(/\r?\n/g,' ').replace(/\s+/g,' ').trim();
+}
+function formatUsername(v){
+  const u=cleanText(v);
+  if(!u)return '';
+  return u.startsWith('@')?u:'@'+u;
+}
+function parse(){
+  return input.value.split(/\n/).map(v=>v.trim()).filter(Boolean).map((row,i)=>{
+    const pos=row.indexOf('|');
+    if(pos===-1){
+      const value=cleanText(row);
+      return {username:value,comment:'',display:value,raw:row};
+    }
+    const username=cleanText(row.slice(0,pos));
+    const comment=cleanText(row.slice(pos+1));
+    return {username,comment,display:username||('Entry '+(i+1)),raw:row};
+  });
+}
+function wheelLabel(e){
+  const u=formatUsername(e.username)||e.display||'Entry';
+  const combined=e.comment?u+' | '+e.comment:u;
+  return combined;
+}
+function draw(){
+  const s=c.width,m=s/2,r=m-30;
+  x.clearRect(0,0,s,s);
+  if(!entries.length)return;
+  const a=Math.PI*2/entries.length;
+  entries.forEach((e,i)=>{
+    const st=rotation+i*a-Math.PI/2,en=st+a;
+    x.beginPath();x.moveTo(m,m);x.arc(m,m,r,st,en);x.closePath();
+    x.fillStyle=colors[i%colors.length];x.fill();
+    x.lineWidth=5;x.strokeStyle='rgba(255,255,255,.9)';x.stroke();
+    x.save();x.translate(m,m);x.rotate(st+a/2);
+    x.textAlign='right';x.textBaseline='middle';x.fillStyle='#fff';
+    x.font=`800 ${Math.max(17,Math.min(32,390/Math.max(entries.length,8)))}px system-ui`;
+    let t=wheelLabel(e);
+    if(t.length>26)t=t.slice(0,25)+'…';
+    x.fillText(t,r-42,0);x.restore();
+  });
+  x.beginPath();x.arc(m,m,r,0,Math.PI*2);x.lineWidth=15;x.strokeStyle='#fff';x.stroke();
+}
+function refresh(){
+  if(spinning)return;
+  entries=parse();
+  count.textContent=entries.length;
+  winner.style.display='none';
+  status.textContent=entries.length>=2?'Wheel ready.':'Add at least two comments.';
+  draw();
+}
+function ac(){if(!audio)audio=new(window.AudioContext||window.webkitAudioContext)();return audio}
+function tone(f,d,v=.055,t='square'){
+  if(!sound.checked)return;
+  const a=ac(),o=a.createOscillator(),g=a.createGain();
+  o.type=t;o.frequency.value=f;
+  g.gain.setValueAtTime(v,a.currentTime);
+  g.gain.exponentialRampToValueAtTime(.001,a.currentTime+d);
+  o.connect(g);g.connect(a.destination);o.start();o.stop(a.currentTime+d);
+}
+const norm=a=>((a%(Math.PI*2))+Math.PI*2)%(Math.PI*2);
+function winIndex(){
+  const a=Math.PI*2/entries.length;
+  return Math.floor((norm(-rotation)+a/2)/a)%entries.length;
+}
+function celebrate(){
+  confetti.innerHTML='';
+  for(let i=0;i<80;i++){
+    const p=document.createElement('i');
+    p.style.left=Math.random()*100+'%';
+    p.style.background=colors[i%colors.length];
+    p.style.setProperty('--x',Math.random()*260-130+'px');
+    p.style.animationDelay=Math.random()*.45+'s';
+    confetti.appendChild(p);
+  }
+  setTimeout(()=>confetti.innerHTML='',3500);
+}
+function updateAdminWinner(){
+  if(!lastWinner)return;
+  adminWinner.classList.add('show');
+  adminWinnerName.textContent='Winner: '+formatUsername(lastWinner.username);
+  adminWinnerPhone.textContent='Comment: '+(lastWinner.comment||'No comment');
+}
+function finish(){
+  const i=winIndex(),e=entries[i];
+  lastWinner=e;
+  drawCount++;draws.textContent=drawCount;
+  winnerName.textContent=formatUsername(e.username)||e.display;
+  winnerComment.textContent=e.comment?'Comment: '+e.comment:'';
+  congrats.textContent='Congratulations! You are the lucky winner of the Mobile2000 Guess & Win competition!';
+  winner.style.display='block';
+  updateAdminWinner();
+  status.textContent='Winner selected successfully.';
+  [523,659,784,1047].forEach((f,j)=>setTimeout(()=>tone(f,.34,.12,'sine'),j*140));
+  celebrate();
+  spinning=false;spinBtn.disabled=false;
+  if(remove.checked&&entries.length>2){
+    entries.splice(i,1);
+    input.value=entries.map(v=>v.raw).join('\n');
+    count.textContent=entries.length;
+    setTimeout(draw,950);
+  }
+}
+function spin(){
+  if(spinning||entries.length<2){status.textContent='Add at least two comments before spinning.';return}
+  spinning=true;spinBtn.disabled=true;winner.style.display='none';status.textContent='Spinning…';lastTick=-1;
+  const start=rotation,target=start+(8+Math.random()*5)*Math.PI*2+Math.random()*Math.PI*2,duration=5600,t0=performance.now();
+  function animate(now){
+    const p=Math.min((now-t0)/duration,1),e=1-Math.pow(1-p,4);
+    rotation=start+(target-start)*e;draw();
+    const a=Math.PI*2/entries.length,t=Math.floor(norm(rotation)/a);
+    if(t!==lastTick){tone(480+(1-p)*320,.04);lastTick=t}
+    if(p<1)requestAnimationFrame(animate);
+    else{rotation=norm(rotation);draw();finish()}
+  }
+  requestAnimationFrame(animate);
+}
+
+headline.addEventListener('input',()=>mainHeadline.textContent=headline.value.trim()||'Spin & Win');
+hideDetails.addEventListener('click',()=>{
+  customerDetails.classList.toggle('hidden');
+  const hidden=customerDetails.classList.contains('hidden');
+  hideDetails.textContent=hidden?'Show Customer Details':'Hide Customer Details';
+});
+
+excelUpload.addEventListener('change',async(e)=>{
+  const file=e.target.files&&e.target.files[0];
+  if(!file)return;
+  try{
+    const data=await file.arrayBuffer();
+    const wb=XLSX.read(data,{type:'array'});
+    const ws=wb.Sheets[wb.SheetNames[0]];
+    const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:'',raw:false});
+
+    let headerRow=-1,usernameCol=-1,commentCol=-1;
+    for(let r=0;r<Math.min(rows.length,50);r++){
+      const normalized=rows[r].map(v=>cleanText(v).toLowerCase().replace(/[^a-z]/g,''));
+      const u=normalized.findIndex(v=>v==='username'||v==='user'||v==='userid');
+      const cidx=normalized.findIndex(v=>v==='comment'||v==='comments');
+      if(u!==-1&&cidx!==-1){headerRow=r;usernameCol=u;commentCol=cidx;break}
+    }
+    if(headerRow===-1){
+      status.textContent='Could not find Username and Comment columns in this Excel file.';
+      return;
+    }
+
+    const lines=[];
+    for(let r=headerRow+1;r<rows.length;r++){
+      const username=cleanText(rows[r][usernameCol]);
+      const comment=cleanText(rows[r][commentCol]);
+      if(!username&&!comment)continue;
+      if(!username||!comment)continue;
+      lines.push(username+' | '+comment);
+    }
+    if(!lines.length){
+      status.textContent='No rows with both Username and Comment were found.';
+      return;
+    }
+    input.value=lines.join('\n');
+    refresh();
+    status.textContent=lines.length+' Instagram comments imported from '+file.name+'.';
+    e.target.value='';
+  }catch(err){
+    status.textContent='Could not read this Excel file. Please use .xlsx, .xls, or .csv.';
+    console.error(err);
+  }
+});
+
+update.addEventListener('click',refresh);
+shuffle.addEventListener('click',()=>{
+  if(spinning)return;
+  const a=parse();
+  for(let i=a.length-1;i>0;i--){
+    const j=Math.floor(Math.random()*(i+1));
+    [a[i],a[j]]=[a[j],a[i]];
+  }
+  input.value=a.map(v=>v.raw).join('\n');
+  refresh();
+});
+spinBtn.addEventListener('click',spin);
+present.addEventListener('click',()=>{
+  document.body.classList.toggle('presentation');
+  present.textContent=document.body.classList.contains('presentation')?'Show Admin':'Presentation Mode';
+});
+fullscreen.addEventListener('click',async()=>{
+  try{
+    if(!document.fullscreenElement){
+      await document.documentElement.requestFullscreen();
+      fullscreen.textContent='Exit Full Screen';
+    }else{
+      await document.exitFullscreen();
+      fullscreen.textContent='Full Screen';
+    }
+  }catch(e){status.textContent='Press F11 to enter browser full screen.'}
+});
+document.addEventListener('fullscreenchange',()=>{fullscreen.textContent=document.fullscreenElement?'Exit Full Screen':'Full Screen'});
+refresh();
+
 </script></body></html>
